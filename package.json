@@ -20,7 +20,8 @@
     "db:studio": "node runWithProvider.js \"npx prisma studio --schema ./prisma/DATABASE_PROVIDER-schema.prisma\"",
     "db:migrate:dev": "node runWithProvider.js \"rm -rf ./prisma/migrations && cp -r ./prisma/DATABASE_PROVIDER-migrations ./prisma/migrations && npx prisma migrate dev --schema ./prisma/DATABASE_PROVIDER-schema.prisma && cp -r ./prisma/migrations/* ./prisma/DATABASE_PROVIDER-migrations\"",
     "db:migrate:dev:win": "node runWithProvider.js \"xcopy /E /I prisma\\DATABASE_PROVIDER-migrations prisma\\migrations && npx prisma migrate dev --schema prisma\\DATABASE_PROVIDER-schema.prisma\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:azure-storage-smoke": "node tests/azure-blob-storage.smoke.test.cjs"
   },
   "repository": {
     "type": "git",
@@ -124,7 +125,9 @@
     "swagger-ui-express": "^5.0.1",
     "tsup": "^8.3.5",
     "undici": "^7.16.0",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "@azure/identity": "^4.14.0",
+    "@azure/storage-blob": "^12.34.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

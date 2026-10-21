@@ -348,6 +348,14 @@ export type S3 = {
   SAVE_VIDEO?: boolean;
 };
 
+export type MediaStorageProvider = 'none' | 's3' | 'azure';
+export type AzureBlobStorage = {
+  ENABLED: boolean;
+  ACCOUNT_NAME: string;
+  CONTAINER_NAME: string;
+  ENDPOINT?: string;
+};
+
 export type CacheConf = { REDIS: CacheConfRedis; LOCAL: CacheConfLocal };
 export type Metrics = {
   ENABLED: boolean;
@@ -420,6 +428,8 @@ export interface Env {
   FLOWISE: Flowise;
   CACHE: CacheConf;
   S3?: S3;
+  MEDIA_STORAGE_PROVIDER: MediaStorageProvider;
+  AZURE_BLOB: AzureBlobStorage;
   AUTHENTICATION: Auth;
   METRICS: Metrics;
   TELEMETRY: Telemetry;
@@ -454,6 +464,13 @@ export class ConfigService {
   }
 
   private envProcess(): Env {
+    const legacyS3Enabled = process.env?.S3_ENABLED === 'true';
+    const mediaStorageProvider = (
+      process.env?.MEDIA_STORAGE_PROVIDER || (legacyS3Enabled ? 's3' : 'none')
+    ).toLowerCase() as MediaStorageProvider;
+    if (!['none', 's3', 'azure'].includes(mediaStorageProvider)) {
+      throw new Error(`Unsupported MEDIA_STORAGE_PROVIDER: ${mediaStorageProvider}`);
+    }
     return {
       SERVER: {
         NAME: process.env?.SERVER_NAME || 'evolution',
@@ -852,17 +869,27 @@ export class ConfigService {
           TTL: Number.parseInt(process.env?.CACHE_REDIS_TTL) || 86400,
         },
       },
+      MEDIA_STORAGE_PROVIDER: mediaStorageProvider,
+      AZURE_BLOB: {
+        ENABLED: mediaStorageProvider === 'azure',
+        ACCOUNT_NAME: process.env?.AZURE_BLOB_ACCOUNT_NAME || '',
+        CONTAINER_NAME: process.env?.AZURE_BLOB_CONTAINER || 'evolution-media',
+        ENDPOINT: process.env?.AZURE_BLOB_ENDPOINT || '',
+      },
       S3: {
         ACCESS_KEY: process.env?.S3_ACCESS_KEY,
         SECRET_KEY: process.env?.S3_SECRET_KEY,
         ENDPOINT: process.env?.S3_ENDPOINT,
         BUCKET_NAME: process.env?.S3_BUCKET,
-        ENABLE: process.env?.S3_ENABLED === 'true',
+        // Shared guard used by existing media-storage call sites.
+        ENABLE: mediaStorageProvider !== 'none',
         PORT: Number.parseInt(process.env?.S3_PORT || '9000'),
         USE_SSL: process.env?.S3_USE_SSL === 'true',
         REGION: process.env?.S3_REGION,
         SKIP_POLICY: process.env?.S3_SKIP_POLICY === 'true',
-        SAVE_VIDEO: process.env?.S3_SAVE_VIDEO === 'true',
+        SAVE_VIDEO: mediaStorageProvider === 'azure'
+          ? process.env?.AZURE_BLOB_SAVE_VIDEO === 'true'
+          : process.env?.S3_SAVE_VIDEO === 'true',
       },
       AUTHENTICATION: {
         API_KEY: {
